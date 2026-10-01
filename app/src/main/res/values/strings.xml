@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Kodi Remote</string>
+    <string name="tile_label">Now playing</string>
+    <string name="tile_description">What Kodi is playing, with play/pause and seek</string>
+</resources>
