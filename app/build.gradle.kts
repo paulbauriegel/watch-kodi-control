@@ -1,6 +1,15 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Release signing. keystore.properties (gitignored) holds storeFile, storePassword, keyAlias and keyPassword;
+// without it release builds fall back to the debug key.
+val keystoreProperties = Properties().apply {
+    val file = rootProject.file("keystore.properties")
+    if (file.exists()) file.inputStream().use { load(it) }
 }
 
 android {
@@ -11,8 +20,20 @@ android {
         applicationId = "dev.paul.kodiremote"
         minSdk = 30
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        // CI passes -Pkodiremote.versionCode=<run number> (and versionName from a v* tag) so successive builds can update each other.
+        versionCode = providers.gradleProperty("kodiremote.versionCode").map(String::toInt).getOrElse(1)
+        versionName = providers.gradleProperty("kodiremote.versionName").getOrElse("1.0")
+    }
+
+    signingConfigs {
+        if (keystoreProperties.isNotEmpty()) {
+            create("release") {
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -21,8 +42,8 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
-            // Debug key, so it installs over the debug build without a separate keystore
-            signingConfig = signingConfigs.getByName("debug")
+            // Debug key unless a release keystore is configured, so it installs over the debug build
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 
